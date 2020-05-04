@@ -4,6 +4,9 @@ import tempfile
 import csv
 
 
+s3 = boto3.resource('s3', region_name='eu-central-1')
+
+
 class Datapoint(object):
     S3_BUCKET_NAME = u"flim-ai-sagemaker"
 
@@ -57,14 +60,7 @@ class Datapoint(object):
             raise RuntimeError(
                 "Can't load image - There is at least one none value - ID : {0}, Year: {1}, Director: {2}, Title: {3}".format(self.id, self.year, self.director, self.title))
 
-        s3 = boto3.resource('s3', region_name='us-east-2')
         bucket = s3.Bucket(self.S3_BUCKET_NAME)
-        print("{0}/{1}".format(
-            "{0}_{1}_-_{2}".format(self.year,
-                                   self.director.replace(" ",
-                                                         "_"),
-                                   self.title.replace(" ", "_")),
-            "{0}.jpg".format(str(self.id).zfill(5))))
         obj = bucket.Object("{0}/{1}".format(
             "{0}_{1}_-_{2}".format(self.year,
                                    self.director.replace(" ",
