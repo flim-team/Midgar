@@ -87,19 +87,15 @@ class Datapoint(object):
             u"{0}_{1}".format(self.year,
                               self.build_key()),
             u"{0}.jpg".format(str(self.id).zfill(5)))
-        while self.image_path is None and fail < 2:
-            try:
-                obj = bucket.Object(path)
-                tmp = tempfile.NamedTemporaryFile()
 
-                with open(tmp.name, 'wb') as f:
-                    obj.download_fileobj(f)
+        obj = bucket.Object(path)
+        tmp = tempfile.NamedTemporaryFile()
 
-                self.image_path = tmp
-            except:
-                fail += 1
-                if self.image_path is None:
-                    print(path, sys.exc_info()[0])
+        with open(tmp.name, 'wb') as f:
+            obj.download_fileobj(f)
+
+        self.image_path = tmp
+
         return True
 
     def build_key(self):
@@ -108,6 +104,11 @@ class Datapoint(object):
 
     def obtain_classname(self):
         return self.CLASSES[self.MAPPER[self.clas]]
+
+    def purge(self):
+        self.image = None
+        self.image_path.close()
+        self.image_path = None
 
 
 class ShotScaleLoader(object):
@@ -289,7 +290,7 @@ class ShotScaleLocalExporter(ShotScaleExporter):
             "jpg")
         datapoint.image.save("{0}/{1}".format(path,
                                               filename))
-        datapoint.image = None
+        datapoint.purge()
 
     def _compress(self):
         with ZipFile("{0}{1}{2}".format(self.path,
