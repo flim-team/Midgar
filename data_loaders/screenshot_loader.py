@@ -83,10 +83,10 @@ class Datapoint(object):
 
         bucket = s3.Bucket(configs.S3_INPUT_BUCKET_NAME)
         fail = 0
-        path = "{0}/{1}".format(
-            "{0}_{1}".format(self.year,
-                             self.build_key()),
-            "{0}.jpg".format(str(self.id).zfill(5)))
+        path = u"{0}/{1}".format(
+            u"{0}_{1}".format(self.year,
+                              self.build_key()),
+            u"{0}.jpg".format(str(self.id).zfill(5)))
         while self.image_path is None and fail < 10:
             try:
                 obj = bucket.Object(path)
