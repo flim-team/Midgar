@@ -87,7 +87,7 @@ class Datapoint(object):
             u"{0}_{1}".format(self.year,
                               self.build_key()),
             u"{0}.jpg".format(str(self.id).zfill(5)))
-        while self.image_path is None and fail < 10:
+        while self.image_path is None and fail < 2:
             try:
                 obj = bucket.Object(path)
                 tmp = tempfile.NamedTemporaryFile()
@@ -98,9 +98,8 @@ class Datapoint(object):
                 self.image_path = tmp
             except:
                 fail += 1
-
-        if self.image_path is None:
-            print(path)
+                if self.image_path is None:
+                    print(path, sys.exc_info()[0])
         return True
 
     def build_key(self):
