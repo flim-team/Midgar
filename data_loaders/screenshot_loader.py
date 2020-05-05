@@ -82,7 +82,6 @@ class Datapoint(object):
                 "Can't load image - There is at least one none value - ID : {0}, Year: {1}, Director: {2}, Title: {3}".format(self.id, self.year, self.director, self.title))
 
         bucket = s3.Bucket(configs.S3_INPUT_BUCKET_NAME)
-        fail = 0
         path = u"{0}/{1}".format(
             u"{0}_{1}".format(self.year,
                               self.build_key()),
@@ -91,10 +90,15 @@ class Datapoint(object):
         obj = bucket.Object(path)
         tmp = tempfile.NamedTemporaryFile()
 
-        with open(tmp.name, 'wb') as f:
-            obj.download_fileobj(f)
+        try:
+            with open(tmp.name, 'wb') as f:
+                obj.download_fileobj(f)
 
-        self.image_path = tmp
+            self.image_path = tmp
+        except:
+            tmp.close()
+            print("Error while fetching ressource - {0}".format(path))
+            return False
 
         return True
 
