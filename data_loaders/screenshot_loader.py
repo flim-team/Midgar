@@ -96,7 +96,7 @@ class Datapoint(object):
 
             self.image_path = tmp
         except:
-            self.purge()
+            tmp.close()
             print("Error while fetching ressource - {0}".format(path))
             return False
 
