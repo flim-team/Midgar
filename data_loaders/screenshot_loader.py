@@ -84,21 +84,16 @@ class Datapoint(object):
         bucket = s3.Bucket(configs.S3_INPUT_BUCKET_NAME)
         fail = 0
         while self.image_path is None and fail < 10:
-            try:
-                obj = bucket.Object("{0}/{1}".format(
-                    "{0}_{1}_-_{2}".format(self.year,
-                                           self.director.replace(" ",
-                                                                 "_"),
-                                           self.title.replace(" ", "_")),
-                    "{0}.jpg".format(str(self.id).zfill(5))))
-                tmp = tempfile.NamedTemporaryFile()
+            obj = bucket.Object("{0}/{1}".format(
+                "{0}_{1}".format(self.year,
+                                 self.build_key()),
+                "{0}.jpg".format(str(self.id).zfill(5))))
+            tmp = tempfile.NamedTemporaryFile()
 
-                with open(tmp.name, 'wb') as f:
-                    obj.download_fileobj(f)
+            with open(tmp.name, 'wb') as f:
+                obj.download_fileobj(f)
 
-                self.image_path = tmp
-            except:
-                fail += 1
+            self.image_path = tmp
 
         if self.image_path is None:
             print(configs.S3_INPUT_BUCKET_NAME, "{0}/{1}".format(
@@ -210,7 +205,11 @@ class ShotScaleExporter(object):
 
     def save(self):
         skipped_images = 0
+        previous_key = ""
         for datapoint in self.datapoints:
+            if datapoint.build_key() == previous_key:
+                continue
+            previous_key = datapoint.build_key()
             datapoint.download_image()
             if datapoint.image_path is not None:
                 datapoint.image = self._transform_image(datapoint.image_path)
