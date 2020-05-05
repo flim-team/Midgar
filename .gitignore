@@ -72,6 +72,8 @@ bazel-*
 # logfiles
 *.log
 
+data/shotscale__*
+
 .DS_Store
 
 # Sphinx documentation
