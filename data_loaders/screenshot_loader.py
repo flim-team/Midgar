@@ -9,6 +9,9 @@ import random
 from datetime import datetime
 import os
 from zipfile import ZipFile
+import pathlib
+
+import tensorflow as tf
 
 from PIL import Image
 
@@ -306,6 +309,13 @@ class ShotScaleLocalExporter(ShotScaleExporter):
                 for filename in filenames:
                     filePath = os.path.join(folderName, filename)
                     zipObj.write(filePath)
+
+
+def load_from_remote(remote_path):
+    data_dir = tf.keras.utils.get_file(origin=remote_path,
+                                       fname=remote_path.replace(".gz", ""),
+                                       untar=True)
+    data_dir = pathlib.Path(data_dir)
 
 
 if __name__ == '__main__':

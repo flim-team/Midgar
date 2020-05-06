@@ -5,3 +5,5 @@ boto3>=1.9.214
 pillow>=6.0.0
 unidecode>=1.1.1
 argparse>=1.4.0
+tensorflow>=2.1.0
+pathlib>=1.0.1
