@@ -79,16 +79,16 @@ class Datapoint(object):
         self.order = int(id) if id is not None else None
         self.uuid = "{0}_{1}_{2}_{3}".format(director, year, title, id)
         self.image = None
+        self.bucket = s3.Bucket(configs.S3_INPUT_BUCKET_NAME)
 
     def download_image(self):
         if self.id is None or self.year is None or self.director is None or self.title is None:
             raise RuntimeError(
                 "Can't load image - There is at least one none value - ID : {0}, Year: {1}, Director: {2}, Title: {3}".format(self.id, self.year, self.director, self.title))
 
-        bucket = s3.Bucket(configs.S3_INPUT_BUCKET_NAME)
         path = self._build_path()
 
-        obj = bucket.Object(path)
+        obj = self.bucket.Object(path)
         tmp = tempfile.NamedTemporaryFile()
 
         try:
@@ -105,8 +105,7 @@ class Datapoint(object):
 
     def is_valid_image_path(self):
         try:
-            s3.head_object(Bucket=configs.S3_INPUT_BUCKET_NAME,
-                           Key=self._build_path())
+            self.bucket.Object(self._build_path()).load()
         except ClientError:
             return False
         return True
