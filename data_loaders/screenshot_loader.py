@@ -79,7 +79,6 @@ class Datapoint(object):
         self.order = int(id) if id is not None else None
         self.uuid = "{0}_{1}_{2}_{3}".format(director, year, title, id)
         self.image = None
-        self.bucket = s3.Bucket(configs.S3_INPUT_BUCKET_NAME)
 
     def download_image(self):
         if self.id is None or self.year is None or self.director is None or self.title is None:
@@ -88,7 +87,8 @@ class Datapoint(object):
 
         path = self._build_path()
 
-        obj = self.bucket.Object(path)
+        bucket = s3.Bucket(configs.S3_INPUT_BUCKET_NAME)
+        obj = bucket.Object(path)
         tmp = tempfile.NamedTemporaryFile()
 
         try:
@@ -105,7 +105,8 @@ class Datapoint(object):
 
     def is_valid_image_path(self):
         try:
-            self.bucket.Object(self._build_path()).load()
+            bucket = s3.Bucket(configs.S3_INPUT_BUCKET_NAME)
+            bucket.Object(self._build_path()).load()
         except ClientError:
             return False
         return True
