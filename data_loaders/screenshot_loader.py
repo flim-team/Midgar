@@ -240,7 +240,7 @@ class ShotScaleExporter(object):
     def validating_size(self):
         return round(238024*self.sampling_size[1])
 
-    def _mix(self):
+    def save(self):
         if self.split_strategy == SplitStrategy.NONE:
             pass
         elif self.split_strategy == SplitStrategy.RANDOM:
@@ -254,6 +254,9 @@ class ShotScaleExporter(object):
                         datapoint.image = self._transform_image(
                             datapoint.image_path)
                         self.training_set.append(datapoint)
+                        datapoint.download_image()
+                        self._save(datapoint,
+                                   target_path='/training')
                     except OSError:
                         print("There is an error")
                 index += 1
@@ -266,6 +269,8 @@ class ShotScaleExporter(object):
                         datapoint.image = self._transform_image(
                             datapoint.image_path)
                         self.validation_set.append(datapoint)
+                        self._save(datapoint,
+                                   target_path='/validation')
                     except OSError:
                         print("There is an error")
                 index += 1
@@ -277,6 +282,8 @@ class ShotScaleExporter(object):
                         datapoint.image = self._transform_image(
                             datapoint.image_path)
                         self.testing_set.append(datapoint)
+                        self._save(datapoint,
+                                   target_path='/testing')
                     except OSError:
                         print("There is an error")
         elif self.split_strategy == SplitStrategy.DIRECTOR:
@@ -303,10 +310,16 @@ class ShotScaleExporter(object):
             for director in sorted_directors:
                 if len(self.training_set) < self.training_size():
                     self.training_set.extend(directors[director])
+                    self._save(datapoint,
+                               target_path='/training')
                 elif len(self.validation_set) < self.validating_size():
                     self.validation_set.extend(directors[director])
+                    self._save(datapoint,
+                               target_path='/validation')
                 else:
                     self.testing_set.extend(directors[director])
+                    self._save(datapoint,
+                               target_path='/testing')
         else:
             exit("{0} Split strategy is not supported".format(self.split_strategy))
 
@@ -315,30 +328,6 @@ class ShotScaleExporter(object):
                   path):
         for datapoint in dataset:
             self._save(datapoint, target_path=path)
-
-    def save(self):
-        self._mix()
-        if self.split_strategy == SplitStrategy.NONE:
-            skipped_images = 0
-            for datapoint in self.datapoints:
-                datapoint.download_image()
-                if datapoint.image_path is not None:
-                    datapoint.image = self._transform_image(
-                        datapoint.image_path)
-                    self._save(datapoint)
-                else:
-                    skipped_images += 1
-            self._compress()
-            print("{0} images skipped over {1} initial images so {2} images saved".format(skipped_images,
-                                                                                          len(
-                                                                                              self.datapoints),
-                                                                                          len(self.datapoints)-skipped_images))
-        else:
-            skipped_images = 0
-            self._save_set(self.training_set, path="/training")
-            self._save_set(self.testing_set, path="/testing")
-            self._save_set(self.validation_set, path="/validation")
-            self._compress()
 
     def _save(self,
               datapoint,
