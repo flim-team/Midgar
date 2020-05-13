@@ -235,22 +235,47 @@ class ShotScaleExporter(object):
         self.training_set = []
 
     def training_size(self):
-        return round(len(self.datapoints)*self.sampling_size[0])
+        return round(238024*self.sampling_size[0])
 
     def validating_size(self):
-        return round(len(self.datapoints)*self.sampling_size[1])
+        return round(238024*self.sampling_size[1])
 
     def _mix(self):
         if self.split_strategy == SplitStrategy.NONE:
             pass
         elif self.split_strategy == SplitStrategy.RANDOM:
             random.shuffle(self.datapoints)
-            self.training_set = self.datapoints[0:self.training_size()]
-            self.validation_set = self.datapoints[self.training_size():
-                                                  self.training_size()
-                                                  + self.validating_size()]
-            self.testing_set = self.datapoints[self.training_size()
-                                               + self.validating_size():]
+            index = 0
+            while (len(self.training_set) < self.training_size()):
+                datapoint = self.datapoints[index]
+                if datapoint.image_path is not None:
+                    try:
+                        datapoint.image = self._transform_image(
+                            datapoint.image_path)
+                        self.training_set.append(datapoint)
+                    except OSError:
+                        print("There is an error")
+                index += 1
+
+            while (len(self.validation_set) < self.validating_size()):
+                datapoint = self.datapoints[index]
+                if datapoint.image_path is not None:
+                    try:
+                        datapoint.image = self._transform_image(
+                            datapoint.image_path)
+                        self.validation_set.append(datapoint)
+                    except OSError:
+                        print("There is an error")
+                index += 1
+
+            for datapoint in self.datapoints[index:]:
+                if datapoint.image_path is not None:
+                    try:
+                        datapoint.image = self._transform_image(
+                            datapoint.image_path)
+                        self.testing_set.append(datapoint)
+                    except OSError:
+                        print("There is an error")
         elif self.split_strategy == SplitStrategy.DIRECTOR:
             directors = {}
             for datapoint in self.datapoints:
@@ -276,20 +301,8 @@ class ShotScaleExporter(object):
     def _save_set(self,
                   dataset,
                   path):
-        skipped_images = 0
         for datapoint in dataset:
-            datapoint.download_image()
-            if datapoint.image_path is not None:
-                datapoint.image = self._transform_image(
-                    datapoint.image_path)
-                self._save(datapoint, target_path=path)
-            else:
-                skipped_images += 1
-        print("{0} images skipped, {1} images saved at {2}".format(skipped_images,
-                                                                   len(self.datapoints) -
-                                                                   skipped_images,
-                                                                   path),
-              )
+            self._save(datapoint, target_path=path)
 
     def save(self):
         self._mix()
@@ -476,7 +489,7 @@ if __name__ == '__main__':
 
     if args.local_save != "" and not args.remote_save:
         shotscale_loader = ShotScaleLoader()
-        shotscale_loader.obtain_valid_datapoints()
+        shotscale_loader.obtain_datapoints()
         shotscale_exporter = ShotScaleLocalExporter(datapoints=shotscale_loader.datapoints,
                                                     path=args.local_save,
                                                     algorithm=picked_algo,
