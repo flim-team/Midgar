@@ -277,15 +277,35 @@ class ShotScaleExporter(object):
 
             for director in sorted_directors:
                 if len(self.training_set) < self.training_size():
-                    self.training_set.extend(directors[director])
-                    target_path = '/training'
+                    print(director, "Training")
+                    for datapoint in directors[director]:
+                        datapoint.download_image()
+                        if datapoint.image_path is not None:
+                            datapoint.image = self._transform_image(
+                                datapoint.image_path)
+                            self._save(datapoint,
+                                       target_path='/training')
+                            self.training_set.append(datapoint)
                 elif len(self.validation_set) < self.validating_size():
-                    self.validation_set.extend(directors[director])
-                    target_path = '/validation'
+                    print(director, "Validation")
+                    for datapoint in directors[director]:
+                        datapoint.download_image()
+                        if datapoint.image_path is not None:
+                            datapoint.image = self._transform_image(
+                                datapoint.image_path)
+                            self._save(datapoint,
+                                       target_path='/validation')
+                            self.validation_set.append(datapoint)
                 else:
-                    target_path = "/testing"
-                self._save(datapoint,
-                           target_path=target_path)
+                    print(director, "Testing")
+                    for datapoint in directors[director]:
+                        datapoint.download_image()
+                        if datapoint.image_path is not None:
+                            datapoint.image = self._transform_image(
+                                datapoint.image_path)
+                            self._save(datapoint,
+                                       target_path='/testing')
+
         else:
             exit("{0} Split strategy is not supported".format(self.split_strategy))
 
