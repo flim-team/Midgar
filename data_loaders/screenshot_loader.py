@@ -246,60 +246,28 @@ class ShotScaleExporter(object):
         elif self.split_strategy == SplitStrategy.RANDOM:
             random.shuffle(self.datapoints)
             index = 0
-            while (len(self.training_set) < self.training_size()):
-                datapoint = self.datapoints[index]
-                datapoint.download_image()
-                if datapoint.image_path is not None:
-                    try:
-                        datapoint.image = self._transform_image(
-                            datapoint.image_path)
-                        self.training_set.append(datapoint)
-                        datapoint.download_image()
-                        self._save(datapoint,
-                                   target_path='/training')
-                    except OSError:
-                        print("There is an error")
-                index += 1
-
-            while (len(self.validation_set) < self.validating_size()):
-                datapoint = self.datapoints[index]
-                datapoint.download_image()
-                if datapoint.image_path is not None:
-                    try:
-                        datapoint.image = self._transform_image(
-                            datapoint.image_path)
-                        self.validation_set.append(datapoint)
-                        self._save(datapoint,
-                                   target_path='/validation')
-                    except OSError:
-                        print("There is an error")
-                index += 1
-
-            for datapoint in self.datapoints[index:]:
-                datapoint.download_image()
-                if datapoint.image_path is not None:
-                    try:
-                        datapoint.image = self._transform_image(
-                            datapoint.image_path)
-                        self.testing_set.append(datapoint)
-                        self._save(datapoint,
-                                   target_path='/testing')
-                    except OSError:
-                        print("There is an error")
-        elif self.split_strategy == SplitStrategy.DIRECTOR:
-            directors = {}
             for datapoint in self.datapoints:
                 datapoint.download_image()
                 if datapoint.image_path is not None:
-                    try:
-                        datapoint.image = self._transform_image(
-                            datapoint.image_path)
+                    datapoint.image = self._transform_image(
+                        datapoint.image_path)
+                    if index % 10 == 0:
+                        target_path = "/testing"
+                    elif index % 10 <= 8:
+                        target_path = "/training"
+                    else:
+                        target_path = "/validation"
 
-                        if datapoint.director not in directors:
-                            directors[datapoint.director] = []
-                        directors[datapoint.director].append(datapoint)
-                    except OSError:
-                        print("There is an error")
+                    self._save(datapoint,
+                               target_path=target_path)
+                    index += 1
+
+        elif self.split_strategy == SplitStrategy.DIRECTOR:
+            directors = {}
+            for datapoint in self.datapoints:
+                if datapoint.director not in directors:
+                    directors[datapoint.director] = []
+                directors[datapoint.director].append(datapoint)
 
             sorted_directors = [director for director, _ in
                                 sorted(
@@ -310,24 +278,16 @@ class ShotScaleExporter(object):
             for director in sorted_directors:
                 if len(self.training_set) < self.training_size():
                     self.training_set.extend(directors[director])
-                    self._save(datapoint,
-                               target_path='/training')
+                    target_path = '/training'
                 elif len(self.validation_set) < self.validating_size():
                     self.validation_set.extend(directors[director])
-                    self._save(datapoint,
-                               target_path='/validation')
+                    target_path = '/validation'
                 else:
-                    self.testing_set.extend(directors[director])
-                    self._save(datapoint,
-                               target_path='/testing')
+                    target_path = "/testing"
+                self._save(datapoint,
+                           target_path=target_path)
         else:
             exit("{0} Split strategy is not supported".format(self.split_strategy))
-
-    def _save_set(self,
-                  dataset,
-                  path):
-        for datapoint in dataset:
-            self._save(datapoint, target_path=path)
 
     def _save(self,
               datapoint,
