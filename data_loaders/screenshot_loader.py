@@ -292,6 +292,7 @@ class ShotScaleExporter(object):
               )
 
     def save(self):
+        self._mix()
         if self.split_strategy == SplitStrategy.NONE:
             skipped_images = 0
             for datapoint in self.datapoints:
@@ -309,9 +310,9 @@ class ShotScaleExporter(object):
                                                                                           len(self.datapoints)-skipped_images))
         else:
             skipped_images = 0
-            self._save_set(self.training_set(), path="/training")
-            self._save_set(self.testing_set(), path="/testing")
-            self._save_set(self.validating_size(), path="/validation")
+            self._save_set(self.training_set, path="/training")
+            self._save_set(self.testing_set, path="/testing")
+            self._save_set(self.validation_set, path="/validation")
             self._compress()
 
     def _save(self,
