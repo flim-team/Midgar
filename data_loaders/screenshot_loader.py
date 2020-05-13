@@ -248,6 +248,7 @@ class ShotScaleExporter(object):
             index = 0
             while (len(self.training_set) < self.training_size()):
                 datapoint = self.datapoints[index]
+                datapoint.download_image()
                 if datapoint.image_path is not None:
                     try:
                         datapoint.image = self._transform_image(
@@ -259,6 +260,7 @@ class ShotScaleExporter(object):
 
             while (len(self.validation_set) < self.validating_size()):
                 datapoint = self.datapoints[index]
+                datapoint.download_image()
                 if datapoint.image_path is not None:
                     try:
                         datapoint.image = self._transform_image(
@@ -269,6 +271,7 @@ class ShotScaleExporter(object):
                 index += 1
 
             for datapoint in self.datapoints[index:]:
+                datapoint.download_image()
                 if datapoint.image_path is not None:
                     try:
                         datapoint.image = self._transform_image(
@@ -279,9 +282,18 @@ class ShotScaleExporter(object):
         elif self.split_strategy == SplitStrategy.DIRECTOR:
             directors = {}
             for datapoint in self.datapoints:
-                if datapoint.director not in directors:
-                    directors[datapoint.director] = []
-                directors[datapoint.director].append(datapoint)
+                datapoint.download_image()
+                if datapoint.image_path is not None:
+                    try:
+                        datapoint.image = self._transform_image(
+                            datapoint.image_path)
+
+                        if datapoint.director not in directors:
+                            directors[datapoint.director] = []
+                        directors[datapoint.director].append(datapoint)
+                    except OSError:
+                        print("There is an error")
+
             sorted_directors = [director for director, _ in
                                 sorted(
                                     directors.items(),
@@ -406,9 +418,10 @@ class ShotScaleLocalExporter(ShotScaleExporter):
             datapoint.uuid,
             self.algorithm,
             "jpg")
-        datapoint.image.save("{0}/{1}".format(path,
-                                              filename))
-        datapoint.purge()
+        if datapoint.image is not None:
+            datapoint.image.save("{0}/{1}".format(path,
+                                                  filename))
+            datapoint.purge()
 
     def _compress(self):
         with ZipFile("{0}{1}{2}".format(self.path,
