@@ -90,7 +90,6 @@ class DownSampler(object):
         print(path)
         for path, subdirs, files in os.walk(path):
             for name in files:
-                print(os.path.join(path, name))
 
                 datapoint = Data(os.path.join(path, name))
                 if datapoint.director is None:
@@ -129,8 +128,6 @@ class DownSampler(object):
         except FileExistsError:
             pass
 
-        print(training_set, testing_set,
-              validation_set, self.datapoints_director)
         self._save_set(
             training_set, "{0}_{1}/training".format(random_name,
                                                     self.split_strategy))
