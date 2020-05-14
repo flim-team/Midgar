@@ -74,7 +74,7 @@ class Datapoint(object):
         self.director = director
         self.title = title
         self.timestamp = timestamp
-        self.clas = int(float(clas))
+        self.clas = int(float(clas)) if clas is not None else None
         self.image_path = image_path
         self.order = int(id) if id is not None else None
         self.uuid = "{0}_{1}_{2}_{3}".format(director, year, title, id)
