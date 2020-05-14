@@ -127,7 +127,8 @@ class Datapoint(object):
 
     def purge(self):
         self.image = None
-        self.image_path.close()
+        if self.image_path is not None:
+            self.image_path.close()
         self.image_path = None
 
 
