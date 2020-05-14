@@ -70,7 +70,7 @@ class Data(Datapoint):
         path = self.path.replace("\"", "").replace("'", "")
         data = path.split("/")[-1]
         (director, _, title, year) = data.split("_")
-        self.year = int(year.split("."[0]))
+        self.year = int(year.split(".")[0])
         self.director = director
         self.title = title
 
