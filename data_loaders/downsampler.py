@@ -52,13 +52,13 @@ class Data(Datapoint):
         super().__init__()
         self.path = path
         self._parse_path()
-        if path.contains(self.CLASSES[0]):
+        if self.CLASSES[0]in path:
             self.clas = self.CLASSES[0]
-        elif path.contains(self.CLASSES[1]):
+        elif self.CLASSES[1]in path:
             self.clas = self.CLASSES[1]
-        elif path.contains(self.CLASSES[2]):
+        elif self.CLASSES[2]in path:
             self.clas = self.CLASSES[2]
-        elif path.contains(self.CLASSES[3]):
+        elif self.CLASSES[3] in path:
             self.clas = self.CLASSES[3]
         else:
             exit("There are no possible classes extracted")
