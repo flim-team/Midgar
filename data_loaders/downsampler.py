@@ -69,9 +69,10 @@ class Data(Datapoint):
     def _parse_path(self):
         path = self.path.replace("\"", "").replace("'", "")
         data = path.split("/")[-1]
-        (year_director, self.title) = data.split("_-_")
-        self.year = int(year_director[:4])
-        self.director = year_director[4:]
+        (director, _, title, year) = data.split("_")
+        self.year = int(year)
+        self.director = director
+        self.title = title
 
 
 class DownSampler(object):
