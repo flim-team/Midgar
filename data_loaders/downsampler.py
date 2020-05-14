@@ -147,8 +147,8 @@ class DownSampler(object):
 
         for datapoint in dataset:
             datapoint.download_image()
-            datapoint.image.save("{0}/{1}".format(path,
-                                                  str(uuid.uuid1())))
+            datapoint.image.save("{0}/{1}.jpg".format(path,
+                                                      str(uuid.uuid1())))
             datapoint.purge()
 
 
