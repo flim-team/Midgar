@@ -279,32 +279,41 @@ class ShotScaleExporter(object):
                 if len(self.training_set) < self.training_size():
                     print(director, "Training")
                     for datapoint in directors[director]:
-                        datapoint.download_image()
-                        if datapoint.image_path is not None:
-                            datapoint.image = self._transform_image(
-                                datapoint.image_path)
-                            self._save(datapoint,
-                                       target_path='/training')
-                            self.training_set.append(datapoint)
+                        try:
+                            datapoint.download_image()
+                            if datapoint.image_path is not None:
+                                datapoint.image = self._transform_image(
+                                    datapoint.image_path)
+                                self._save(datapoint,
+                                           target_path='/training')
+                                self.training_set.append(datapoint)
+                        except OSError:
+                            print("OS ERROR - Bytes truncated")
                 elif len(self.validation_set) < self.validating_size():
                     print(director, "Validation")
                     for datapoint in directors[director]:
-                        datapoint.download_image()
-                        if datapoint.image_path is not None:
-                            datapoint.image = self._transform_image(
-                                datapoint.image_path)
-                            self._save(datapoint,
-                                       target_path='/validation')
-                            self.validation_set.append(datapoint)
+                        try:
+                            datapoint.download_image()
+                            if datapoint.image_path is not None:
+                                datapoint.image = self._transform_image(
+                                    datapoint.image_path)
+                                self._save(datapoint,
+                                           target_path='/validation')
+                                self.validation_set.append(datapoint)
+                        except OSError:
+                            print("OS ERROR - Bytes truncated")
                 else:
                     print(director, "Testing")
                     for datapoint in directors[director]:
-                        datapoint.download_image()
-                        if datapoint.image_path is not None:
-                            datapoint.image = self._transform_image(
-                                datapoint.image_path)
-                            self._save(datapoint,
-                                       target_path='/testing')
+                        try:
+                            datapoint.download_image()
+                            if datapoint.image_path is not None:
+                                datapoint.image = self._transform_image(
+                                    datapoint.image_path)
+                                self._save(datapoint,
+                                           target_path='/testing')
+                        except OSError:
+                            print("OS ERROR - Bytes truncated")
 
         else:
             exit("{0} Split strategy is not supported".format(self.split_strategy))
