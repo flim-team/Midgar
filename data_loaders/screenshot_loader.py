@@ -250,18 +250,21 @@ class ShotScaleExporter(object):
             for datapoint in self.datapoints:
                 datapoint.download_image()
                 if datapoint.image_path is not None:
-                    datapoint.image = self._transform_image(
-                        datapoint.image_path)
-                    if index % 10 == 0:
-                        target_path = "/testing"
-                    elif index % 10 <= 8:
-                        target_path = "/training"
-                    else:
-                        target_path = "/validation"
+                    try:
+                        datapoint.image = self._transform_image(
+                            datapoint.image_path)
+                        if index % 10 == 0:
+                            target_path = "/testing"
+                        elif index % 10 <= 8:
+                            target_path = "/training"
+                        else:
+                            target_path = "/validation"
 
-                    self._save(datapoint,
-                               target_path=target_path)
-                    index += 1
+                        self._save(datapoint,
+                                   target_path=target_path)
+                        index += 1
+                    except OSError:
+                        print("OSError at save")
 
         elif self.split_strategy == SplitStrategy.DIRECTOR:
             directors = {}
@@ -476,8 +479,6 @@ if __name__ == '__main__':
         picked_split = SplitStrategy.RANDOM
     elif args.split_director:
         picked_split = SplitStrategy.DIRECTOR
-    elif args.split_movie:
-        picked_split = SplitStrategy.MOVIE
 
     if args.local_save != "" and not args.remote_save:
         shotscale_loader = ShotScaleLoader()
