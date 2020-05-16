@@ -126,5 +126,5 @@ S3_INPUT_DIRECTORIES_NAMES = [
     "2013_Scorsese_-_The_Wolf_of_Wall_Street",
 ]
 
-OUTPUT_IMAGE_SIZE = 299
+OUTPUT_IMAGE_SIZE = 224
 DEFAULT_OUTPUT_NAME = "shotscale"
