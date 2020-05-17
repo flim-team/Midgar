@@ -7,3 +7,5 @@ unidecode>=1.1.1
 argparse>=1.4.0
 tensorflow>=2.1.0
 pathlib>=1.0.1
+botocore>=1.12.214
+matplotlib>=3.1.1

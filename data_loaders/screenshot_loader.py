@@ -1,4 +1,6 @@
 import boto3
+from botocore.errorfactory import ClientError
+
 import tempfile
 import argparse
 import csv
@@ -73,7 +75,7 @@ class Datapoint(object):
         self.director = director
         self.title = title
         self.timestamp = timestamp
-        self.clas = int(float(clas))
+        self.clas = int(float(clas)) if clas is not None else None
         self.image_path = image_path
         self.order = int(id) if id is not None else None
         self.uuid = "{0}_{1}_{2}_{3}".format(director, year, title, id)
@@ -84,11 +86,9 @@ class Datapoint(object):
             raise RuntimeError(
                 "Can't load image - There is at least one none value - ID : {0}, Year: {1}, Director: {2}, Title: {3}".format(self.id, self.year, self.director, self.title))
 
+        path = self._build_path()
+
         bucket = s3.Bucket(configs.S3_INPUT_BUCKET_NAME)
-        path = u"{0}/{1}".format(
-            u"{0}_{1}".format(self.year,
-                              self.build_key()),
-            u"{0}.jpg".format(str(self.id).zfill(5)))
 
         obj = bucket.Object(path)
         tmp = tempfile.NamedTemporaryFile()
@@ -105,6 +105,21 @@ class Datapoint(object):
 
         return True
 
+    def is_valid_image_path(self):
+        try:
+            bucket = s3.Bucket(configs.S3_INPUT_BUCKET_NAME)
+            bucket.Object(self._build_path()).load()
+        except ClientError:
+            return False
+        return True
+
+    def _build_path(self):
+        path = u"{0}/{1}".format(
+            u"{0}_{1}".format(self.year,
+                              self.build_key()),
+            u"{0}.jpg".format(str(self.id).zfill(5)))
+        return path
+
     def build_key(self):
         return unidecode.unidecode("{0}_-_{1}".format(self.director.replace(" ", "_"),
                                                       self.title.replace(" ", "_").replace("'", "_")))
@@ -114,7 +129,8 @@ class Datapoint(object):
 
     def purge(self):
         self.image = None
-        self.image_path.close()
+        if self.image_path is not None:
+            self.image_path.close()
         self.image_path = None
 
 
@@ -145,6 +161,17 @@ class ShotScaleLoader(object):
             movies_linked))
         print("Total datapoints : {0}".format(
             len(self.datapoints)))
+
+    def obtain_valid_datapoints(self):
+        if self.datapoints is None or len(self.datapoints) == 0:
+            self.obtain_datapoints()
+
+        valid_datapoints = []
+        for datapoint in self.datapoints:
+            if datapoint.is_valid_image_path():
+                valid_datapoints.append(datapoint)
+        return valid_datapoints
+
 
     def _load_directories(self):
         print("{0} Movies loaded".format(
@@ -189,9 +216,10 @@ class ResizeAlgorithm(enum.Enum):
 
 
 class SplitStrategy(enum.Enum):
-    RANDOM = 0
-    DIRECTOR = 1
-    MOVIE = 2
+    NONE = 0
+    RANDOM = 1
+    DIRECTOR = 2
+    MOVIE = 3
 
 
 class ShotScaleExporter(object):
@@ -199,35 +227,107 @@ class ShotScaleExporter(object):
     def __init__(self,
                  datapoints,
                  algorithm=ResizeAlgorithm.UNKNOWN,
-                 split_strategy=SplitStrategy.RANDOM):
+                 split_strategy=SplitStrategy.RANDOM,
+                 sampling_size=(0.8, 0.1, 0.1)):
         super().__init__()
         self.datapoints = datapoints
         self.algorithm = algorithm
         self.split_strategy = split_strategy
+        self.sampling_size = sampling_size
+        self.validation_set = []
+        self.testing_set = []
+        self.training_set = []
 
-    def mix(self):
-        if self.split_strategy == SplitStrategy.RANDOM:
+    def training_size(self):
+        return round(238024*self.sampling_size[0])
+
+    def validating_size(self):
+        return round(238024*self.sampling_size[1])
+
+    def save(self):
+        if self.split_strategy == SplitStrategy.NONE:
+            pass
+        elif self.split_strategy == SplitStrategy.RANDOM:
             random.shuffle(self.datapoints)
+            index = 0
+            for datapoint in self.datapoints:
+                datapoint.download_image()
+                if datapoint.image_path is not None:
+                    try:
+                        datapoint.image = self._transform_image(
+                            datapoint.image_path)
+                        if index % 10 == 0:
+                            target_path = "/testing"
+                        elif index % 10 <= 8:
+                            target_path = "/training"
+                        else:
+                            target_path = "/validation"
+
+                        self._save(datapoint,
+                                   target_path=target_path)
+                        index += 1
+                    except OSError:
+                        print("OSError at save")
+
+        elif self.split_strategy == SplitStrategy.DIRECTOR:
+            directors = {}
+            for datapoint in self.datapoints:
+                if datapoint.director not in directors:
+                    directors[datapoint.director] = []
+                directors[datapoint.director].append(datapoint)
+
+            sorted_directors = [director for director, _ in
+                                sorted(
+                                    directors.items(),
+                                    key=lambda item: -len(item[1]))
+                                ]
+
+            for director in sorted_directors:
+                if len(self.training_set) < self.training_size():
+                    print(director, "Training")
+                    for datapoint in directors[director]:
+                        try:
+                            datapoint.download_image()
+                            if datapoint.image_path is not None:
+                                datapoint.image = self._transform_image(
+                                    datapoint.image_path)
+                                self._save(datapoint,
+                                           target_path='/training')
+                                self.training_set.append(datapoint)
+                        except OSError:
+                            print("OS ERROR - Bytes truncated")
+                elif len(self.validation_set) < self.validating_size():
+                    print(director, "Validation")
+                    for datapoint in directors[director]:
+                        try:
+                            datapoint.download_image()
+                            if datapoint.image_path is not None:
+                                datapoint.image = self._transform_image(
+                                    datapoint.image_path)
+                                self._save(datapoint,
+                                           target_path='/validation')
+                                self.validation_set.append(datapoint)
+                        except OSError:
+                            print("OS ERROR - Bytes truncated")
+                else:
+                    print(director, "Testing")
+                    for datapoint in directors[director]:
+                        try:
+                            datapoint.download_image()
+                            if datapoint.image_path is not None:
+                                datapoint.image = self._transform_image(
+                                    datapoint.image_path)
+                                self._save(datapoint,
+                                           target_path='/testing')
+                        except OSError:
+                            print("OS ERROR - Bytes truncated")
+
         else:
             exit("{0} Split strategy is not supported".format(self.split_strategy))
 
-    def save(self):
-        skipped_images = 0
-        for datapoint in self.datapoints:
-            datapoint.download_image()
-            if datapoint.image_path is not None:
-                datapoint.image = self._transform_image(datapoint.image_path)
-                self._save(datapoint)
-            else:
-                skipped_images += 1
-        self._compress()
-        print("{0} images skipped over {1} initial images so {2} images saved".format(skipped_images,
-                                                                                      len(
-                                                                                          self.datapoints),
-                                                                                      len(self.datapoints)-skipped_images))
-
     def _save(self,
-              datapoint):
+              datapoint,
+              target_path=""):
         exit("No implementation for this save")
 
     def _compress(self):
@@ -276,13 +376,23 @@ class ShotScaleLocalExporter(ShotScaleExporter):
             tmp, datetime.now().strftime("%d-%m-%Y_%H:%M:%S"))
 
     def _save(self,
-              datapoint):
+              datapoint,
+              target_path=""):
+
         path = "{0}{1}/".format(self.path,
                                 self.tmp)
         try:
             os.mkdir(path)
         except FileExistsError:
             pass
+
+        path = "{0}{1}/".format(path,
+                                target_path)
+        try:
+            os.mkdir(path)
+        except FileExistsError:
+            pass
+
 
         path = "{0}{1}".format(path,
                                datapoint.obtain_classname())
@@ -295,9 +405,11 @@ class ShotScaleLocalExporter(ShotScaleExporter):
             datapoint.uuid,
             self.algorithm,
             "jpg")
-        datapoint.image.save("{0}/{1}".format(path,
-                                              filename))
-        datapoint.purge()
+        if datapoint.image is not None:
+            datapoint.image.save("{0}/{1}".format(path,
+                                                  filename))
+            datapoint.purge()
+
 
     def _compress(self):
         with ZipFile("{0}{1}{2}".format(self.path,
@@ -342,6 +454,12 @@ if __name__ == '__main__':
                         dest="cropped_resize",
                         help='Crop the image to fit the tageted size')
 
+    parser.add_argument('--no_split',
+                        action="store_true",
+                        default=True,
+                        dest="no_split",
+                        help='Does not split the dataset which lead to the generation of only one outcome directory')
+
     parser.add_argument('--split_random',
                         action="store_true",
                         default=False,
@@ -352,18 +470,7 @@ if __name__ == '__main__':
                         default=False,
                         dest="split_director",
                         help='Split the dataset with a director based split of the dataset')
-    parser.add_argument('--split_movie',
-                        action="store_true",
-                        default=False,
-                        dest="split_movie",
-                        help='Split the dataset with a movie based split of the dataset')
 
-    parser.add_argument('--size',
-                        action="store",
-                        dest="size",
-                        default=1000000,
-                        type=int,
-                        help="Size of the dataset, by default all the dataset will be used, for local use you may want to lower the size of the dataset (size 1000 for example)")
 
     args = parser.parse_args()
 
@@ -380,8 +487,6 @@ if __name__ == '__main__':
         picked_split = SplitStrategy.RANDOM
     elif args.split_director:
         picked_split = SplitStrategy.DIRECTOR
-    elif args.split_movie:
-        picked_split = SplitStrategy.MOVIE
 
     if args.local_save != "" and not args.remote_save:
         shotscale_loader = ShotScaleLoader()
