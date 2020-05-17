@@ -1,5 +1,6 @@
 import boto3
 from botocore.errorfactory import ClientError
+
 import tempfile
 import argparse
 import csv
@@ -88,6 +89,7 @@ class Datapoint(object):
         path = self._build_path()
 
         bucket = s3.Bucket(configs.S3_INPUT_BUCKET_NAME)
+
         obj = bucket.Object(path)
         tmp = tempfile.NamedTemporaryFile()
 
@@ -169,6 +171,7 @@ class ShotScaleLoader(object):
             if datapoint.is_valid_image_path():
                 valid_datapoints.append(datapoint)
         return valid_datapoints
+
 
     def _load_directories(self):
         print("{0} Movies loaded".format(
@@ -375,6 +378,7 @@ class ShotScaleLocalExporter(ShotScaleExporter):
     def _save(self,
               datapoint,
               target_path=""):
+
         path = "{0}{1}/".format(self.path,
                                 self.tmp)
         try:
@@ -388,6 +392,7 @@ class ShotScaleLocalExporter(ShotScaleExporter):
             os.mkdir(path)
         except FileExistsError:
             pass
+
 
         path = "{0}{1}".format(path,
                                datapoint.obtain_classname())
@@ -404,6 +409,7 @@ class ShotScaleLocalExporter(ShotScaleExporter):
             datapoint.image.save("{0}/{1}".format(path,
                                                   filename))
             datapoint.purge()
+
 
     def _compress(self):
         with ZipFile("{0}{1}{2}".format(self.path,
@@ -453,6 +459,7 @@ if __name__ == '__main__':
                         default=True,
                         dest="no_split",
                         help='Does not split the dataset which lead to the generation of only one outcome directory')
+
     parser.add_argument('--split_random',
                         action="store_true",
                         default=False,
@@ -463,6 +470,7 @@ if __name__ == '__main__':
                         default=False,
                         dest="split_director",
                         help='Split the dataset with a director based split of the dataset')
+
 
     args = parser.parse_args()
 
